@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Frame Remote" />
+  <title>ImmichFrame Remote</title>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #13131a;
+      --surface2: #1c1c26;
+      --border: #2a2a3a;
+      --accent: #7b6ef6;
+      --accent2: #e8a87c;
+      --text: #e8e8f0;
+      --text-muted: #6e6e88;
+      --success: #6ed8a0;
+      --danger: #f07575;
+      --radius: 18px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+      padding-top: calc(var(--safe-top) + 16px);
+      padding-bottom: calc(var(--safe-bottom) + 16px);
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .logo-text span {
+      color: var(--accent);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .status-pill:active { transform: scale(0.95); }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background 0.3s;
+    }
+
+    .status-dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .status-dot.err { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+    .status-dot.loading { background: var(--accent2); animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+    /* ── IP Config ── */
+    .config-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .config-label {
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .config-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      outline: none;
+      -webkit-user-select: auto;
+      user-select: auto;
+      transition: border-color 0.2s;
+    }
+
+    .config-input:focus { border-color: var(--accent); }
+
+    .save-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+
+    .save-btn:active { transform: scale(0.94); background: #6558e0; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      top: calc(var(--safe-top) + 60px);
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.25s;
+      white-space: nowrap;
+      z-index: 100;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.ok { color: var(--success); border-color: var(--success); }
+    .toast.err { color: var(--danger); border-color: var(--danger); }
+
+    /* ── Main controls area ── */
+    .controls {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: auto;
+    }
+
+    /* ── Section Label ── */
+    .section-label {
+      font-size: 10px;
+      font-family: 'DM Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: -6px;
+    }
+
+    /* ── Nav Row ── */
+    .nav-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ── Button Base ── */
+    .btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 18px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.1s;
+      border-radius: inherit;
+    }
+
+    .btn:active::after { opacity: 0.05; }
+    .btn:active { transform: scale(0.94); border-color: var(--accent); }
+
+    .btn-icon {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .btn-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* Variants */
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(123,110,246,0.2), rgba(123,110,246,0.05));
+      border-color: rgba(123,110,246,0.4);
+    }
+    .btn-primary .btn-label { color: var(--accent); }
+
+    .btn-warm {
+      background: linear-gradient(135deg, rgba(232,168,124,0.18), rgba(232,168,124,0.04));
+      border-color: rgba(232,168,124,0.35);
+    }
+    .btn-warm .btn-label { color: var(--accent2); }
+
+    .btn-danger {
+      background: linear-gradient(135deg, rgba(240,117,117,0.15), rgba(240,117,117,0.03));
+      border-color: rgba(240,117,117,0.3);
+    }
+    .btn-danger .btn-label { color: var(--danger); }
+
+    .btn-success {
+      background: linear-gradient(135deg, rgba(110,216,160,0.15), rgba(110,216,160,0.03));
+      border-color: rgba(110,216,160,0.3);
+    }
+    .btn-success .btn-label { color: var(--success); }
+
+    /* Full-width button */
+    .btn-wide {
+      grid-column: 1 / -1;
+      flex-direction: row;
+      gap: 14px;
+      padding: 16px 20px;
+      justify-content: flex-start;
+    }
+
+    .btn-wide .btn-icon { font-size: 22px; }
+
+    /* ── Pause indicator ── */
+    .btn-pause-state {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 9px;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 100px;
+      background: rgba(123,110,246,0.2);
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Brightness ── */
+    .brightness-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 18px 16px;
+    }
+
+    .brightness-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .brightness-title {
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brightness-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: var(--accent2);
+    }
+
+    .slider-wrap {
+      position: relative;
+      height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 26px;
+      height: 26px;
+      background: white;
+      border-radius: 50%;
+      border: 3px solid var(--accent2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); }
+
+    .brightness-presets {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .preset-btn {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 4px;
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:active { transform: scale(0.93); border-color: var(--accent2); color: var(--accent2); }
+
+    /* ── Two-col grid ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🖼</div>
+      <div class="logo-text">Frame<span>Remote</span></div>
+    </div>
+    <div class="status-pill" onclick="pingDevice()">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">tap to ping</span>
+    </div>
+  </header>
+
+  <!-- IP Config Bar -->
+  <div class="config-bar">
+    <span class="config-label">IP</span>
+    <input class="config-input" type="text" id="ipInput" placeholder="192.168.1.xx" inputmode="decimal" autocomplete="off" autocorrect="off" spellcheck="false" />
+    <button class="save-btn" onclick="saveIP()">Save</button>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Controls -->
+  <div class="controls">
+
+    <!-- Playback -->
+    <div class="section-label">Playback</div>
+    <div class="nav-row">
+      <div class="btn btn-primary" onclick="sendCmd('previous')">
+        <div class="btn-icon">⏮</div>
+        <div class="btn-label">Prev</div>
+      </div>
+      <div class="btn btn-primary" id="pauseBtn" onclick="togglePause()">
+        <div class="btn-icon" id="pauseIcon">⏸</div>
+        <div class="btn-label" id="pauseLabel">Pause</div>
+        <div class="btn-pause-state" id="pauseState">playing</div>
+      </div>
+      <div class="btn btn-primary" onclick="sendCmd('next')">
+        <div class="btn-icon">⏭</div>
+        <div class="btn-label">Next</div>
+      </div>
+    </div>
+
+    <!-- Brightness Slider -->
+    <div class="section-label">Brightness</div>
+    <div class="brightness-card">
+      <div class="brightness-header">
+        <div class="brightness-title">☀️ Screen Brightness</div>
+        <div class="brightness-value" id="brightnessDisplay">70%</div>
+      </div>
+      <div class="slider-wrap">
+        <input type="range" id="brightnessSlider" min="0" max="100" value="70" oninput="onBrightnessInput(this.value)" onchange="sendBrightness()" />
+      </div>
+      <div class="brightness-presets">
+        <div class="preset-btn" onclick="setBrightness(10)">10%</div>
+        <div class="preset-btn" onclick="setBrightness(25)">25%</div>
+        <div class="preset-btn" onclick="setBrightness(50)">50%</div>
+        <div class="preset-btn" onclick="setBrightness(75)">75%</div>
+        <div class="preset-btn" onclick="setBrightness(100)">100%</div>
+        <div class="preset-btn" onclick="setBrightness(-1)">Auto</div>
+      </div>
+    </div>
+
+    <!-- Display -->
+    <div class="section-label">Display</div>
+    <div class="two-col">
+      <div class="btn btn-danger" onclick="sendCmd('dim')">
+        <div class="btn-icon">🌑</div>
+        <div class="btn-label">Dim</div>
+      </div>
+      <div class="btn btn-success" onclick="sendCmd('undim')">
+        <div class="btn-icon">🌕</div>
+        <div class="btn-label">Undim</div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="section-label">Device</div>
+    <div class="nav-row" style="grid-template-columns: 1fr">
+      <div class="btn btn-warm btn-wide" onclick="sendCmd('settings')">
+        <div class="btn-icon">⚙️</div>
+        <div class="btn-label">Open Settings on Frame</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    ImmichFrame Android · port 53287
+  </div>
+
+</div>
+
+<script>
+  const PORT = 53287;
+  let paused = false;
+  let brightnessTimer = null;
+
+  // ── Persist IP ──
+  const ipInput = document.getElementById('ipInput');
+
+  function loadIP() {
+    const saved = localStorage.getItem('immichframe_ip') || '';
+    ipInput.value = saved;
+  }
+
+  function saveIP() {
+    const val = ipInput.value.trim();
+    localStorage.setItem('immichframe_ip', val);
+    showToast('Saved: ' + val, 'ok');
+    pingDevice();
+  }
+
+  function getBase() {
+    const ip = ipInput.value.trim() || localStorage.getItem('immichframe_ip') || '';
+    return `http://${ip}:${PORT}`;
+  }
+
+  // ── Commands ──
+  async function sendCmd(cmd) {
+    const url = `${getBase()}/${cmd}`;
+    setStatus('loading', cmd + '…');
+    try {
+      const res = await fetch(url, { method: 'GET', mode: 'no-cors', signal: AbortSignal.timeout(4000) });
+      // no-cors = opaque, treat as success if no throw
+      setStatus('ok', cmd + ' ✓');
+      showToast(cmd, 'ok');
+    } catch (e) {
+      setStatus('err', 'unreachable');
+      showToast('Could not reach frame', 'err');
+    }
+  }
+
+  function togglePause() {
+    paused = !paused;
+    document.getElementById('pauseIcon').textContent = paused ? '▶️' : '⏸';
+    document.getElementById('pauseLabel').textContent = paused ? 'Resume' : 'Pause';
+    document.getElementById('pauseState').textContent = paused ? 'paused' : 'playing';
+    sendCmd('pause');
+  }
+
+  // ── Brightness ──
+  function onBrightnessInput(val) {
+    document.getElementById('brightnessDisplay').textContent = val + '%';
+    clearTimeout(brightnessTimer);
+    brightnessTimer = setTimeout(() => sendBrightness(), 600);
+  }
+
+  function sendBrightness() {
+    const raw = parseInt(document.getElementById('brightnessSlider').value);
+    const fval = (raw / 100).toFixed(2);
+    sendCmd(`brightness?value=${fval}`);
+  }
+
+  function setBrightness(pct) {
+    if (pct === -1) {
+      document.getElementById('brightnessSlider').value = 70;
+      document.getElementById('brightnessDisplay').textContent = 'Auto';
+      sendCmd('brightness?value=-1.00');
+    } else {
+      document.getElementById('brightnessSlider').value = pct;
+      document.getElementById('brightnessDisplay').textContent = pct + '%';
+      const fval = (pct / 100).toFixed(2);
+      sendCmd(`brightness?value=${fval}`);
+    }
+  }
+
+  // ── Status ──
+  function setStatus(state, label) {
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    dot.className = 'status-dot ' + state;
+    txt.textContent = label;
+  }
+
+  async function pingDevice() {
+    setStatus('loading', 'pinging…');
+    try {
+      await fetch(`${getBase()}/next`, { method: 'GET', mode: 'no-cors', signal: AbortSignal.timeout(3000) });
+      setStatus('ok', 'online');
+      showToast('Frame is reachable', 'ok');
+    } catch {
+      setStatus('err', 'offline');
+      showToast('Frame unreachable', 'err');
+    }
+  }
+
+  // ── Toast ──
+  let toastTimer;
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 2000);
+  }
+
+  // ── Init ──
+  loadIP();
+  if (ipInput.value) pingDevice();
+
+  // handle save on Enter key in IP field
+  ipInput.addEventListener('keydown', e => { if (e.key === 'Enter') { ipInput.blur(); saveIP(); } });
+</script>
+</body>
+</html>
